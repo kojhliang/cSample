@@ -24,12 +24,14 @@ static const int RETURN_ARRAY_K=5;
 //function params config
 static const int MAX_FUNC_PARAMS_ARRAY_SIZE=1024; //参数数组所有参数最大总长度大小。例子：如果输入的参数为a,bcdde, 则至少需要5*8+6+2=48个字节;
 static const int  FUNC_PARAMS_ARRAY_K=5; 
+static const int  MAX_FUNC_NAME_SIZE=50; 
 //print config
 static const int MAX_PRINT_SIZE=5120; 
 
 //Error msg
 static  char* ERROR_NUMERIC_OVERFLOW="Error:Numeric overflow!";
 static  char* ERROR_STRING_OVERFLOW="Error:String overflow!";
+
 
 /*
  * definitions of Result  --begin
@@ -161,7 +163,8 @@ void print_result( ResultSet* result){
 
 int main(int argc,char *argv[])
 {
-   char *func_name;
+   char funcName[MAX_FUNC_NAME_SIZE]={0};
+   char *func_name=funcName;
    //Initializes an function params  Array (10(Element Number) * 32(Element size))
    StringArray params={0};
    StringArray *func_params_array=&params;
@@ -173,13 +176,20 @@ int main(int argc,char *argv[])
    res->result_array=&array;
    initArray(res->result_array,MAX_RETURN_ARRAY_SIZE,RETURN_ARRAY_K);
 
-    if(argc==1){
-      printf("Test is a test app for contract invoke.\n\
+   char *help="Test is a test app for contract invoke.\n\
+            1.Command Mode:\n\
             Usage: \n\
                    test  -f 'func_name'  -a 'func_args' \n\
-            Note: The number of function parameters should be less than 20.\n\
             Example1:test  -f add  -a 1,2,3 \n\
-            Example2:test  -f concat  -a  func,name,ok \n");   
+            Example2:test  -f concat  -a  func,name,ok \n\
+            2.NodeJs Mode(execute test.wasm by test.js):\n\
+            Usage: \n\
+                   node test.js  'wasm file' -f 'func_name'  -a 'func_args' \n\
+            Example1:node test.js test.wasm -f add  -a 1,2,3 \n\
+            Example2:node test.js test.wasm  -f concat  -a  func,name,ok \n";;
+
+    if(argc==1){
+      printf("%s",help);   
       return 0;
     }
     int opt=0;
@@ -192,6 +202,9 @@ int main(int argc,char *argv[])
         switch(opt)
         {
             case 'f':
+            if(strlen(optarg)>MAX_FUNC_NAME_SIZE){
+                printf("%s .Function name must less than %d byte!\n",ERROR_STRING_OVERFLOW,MAX_FUNC_NAME_SIZE);
+            }
             func_name=optarg;
             printf("func_name:%s \n",optarg);break;
 
@@ -214,14 +227,15 @@ int main(int argc,char *argv[])
             break;
 
             case 'h':
-            printf("Test is a test app for contract invoke.\n\
-            Usage: \n\
-                   test  -f 'func_name'  -a 'func_args' \n\
-            Note: The number of function parameters should be less than 20.\n\
-            Example1:test  -f add  -a 1,2,3 \n\
-            Example2:test  -f concat  -a  func,name,ok \n");                       
+            printf("%s",help);                  
         }
     }
+
+    if(strlen(func_name)==0){
+        printf("You may have entered an incorrect parameter. Here's help:\n"); 
+        printf("%s",help);   
+        return 0;
+     }
 
     //invoke the right function and pass the function parameters
     if(sizeof(func_map)>0){       
